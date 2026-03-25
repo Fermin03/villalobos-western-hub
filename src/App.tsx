@@ -22,6 +22,12 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 
+// --- Páginas del panel de administración ---
+import AdminLogin from "./pages/admin/Login";
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminProductos from "./pages/admin/Productos";
+import AdminPedidos from "./pages/admin/Pedidos";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -32,6 +38,7 @@ const App = () => (
           <Toaster />
           <BrowserRouter>
             <Routes>
+              {/* Rutas públicas con Layout principal */}
               <Route element={<Layout />}>
                 <Route path="/" element={<Index />} />
                 <Route path="/catalogo" element={<Catalog />} />
@@ -49,6 +56,14 @@ const App = () => (
                 <Route path="/privacidad" element={<Privacy />} />
                 <Route path="/terminos" element={<Terms />} />
               </Route>
+
+              {/* Rutas del panel admin — fuera del Layout principal */}
+              <Route path="/admin" element={<AdminLogin />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/productos" element={<AdminProductos />} />
+              <Route path="/admin/pedidos" element={<AdminPedidos />} />
+
+              {/* Ruta 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
