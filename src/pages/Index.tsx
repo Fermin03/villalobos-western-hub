@@ -1,18 +1,36 @@
 /**
  * HOMEPAGE — Hero, trust bar, brands, categories, featured products, about, wholesale banner.
+ * ✅ CORREGIDO: Productos destacados ahora vienen del backend (MySQL), no de datos estáticos.
  */
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFadeInOnScroll } from "@/hooks/useFadeInOnScroll";
 import ProductCard from "@/components/ProductCard";
-import { products, getPlaceholderImage } from "@/data/products";
+import { getPlaceholderImage, getProducts, Product } from "@/data/products";
 import { Package, CreditCard, CheckCircle } from "lucide-react";
 
 const Index = () => {
   const { t, lang } = useLanguage();
   const fadeRef = useFadeInOnScroll();
 
-  const featured = products.slice(0, 8);
+  // ── Estado para productos destacados desde el backend ──
+  const [featured, setFeatured] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  useEffect(() => {
+    getProducts()
+      .then((productos) => {
+        // Mostrar máximo 8 productos destacados
+        setFeatured(productos.slice(0, 8));
+      })
+      .catch((err) => {
+        console.error("Error al cargar productos destacados:", err);
+      })
+      .finally(() => {
+        setLoadingProducts(false);
+      });
+  }, []);
 
   const brands = [
     { key: "domador", badge: "badge.dealer", badgeColor: "bg-accent text-accent-foreground" },
@@ -21,26 +39,23 @@ const Index = () => {
   ];
 
   const categories = [
-    { key: "texanas", img: getPlaceholderImage(400, 600, "Texanas", 20) },
-    { key: "fieltro", img: getPlaceholderImage(400, 600, "Fieltro", 21) },
-    { key: "palma", img: getPlaceholderImage(400, 600, "Palma", 22) },
-    { key: "paja", img: getPlaceholderImage(400, 600, "Paja", 23) },
+    { key: "texanas", img: getPlaceholderImage(0) },
+    { key: "fieltro", img: getPlaceholderImage(1) },
+    { key: "palma", img: getPlaceholderImage(2) },
+    { key: "paja", img: getPlaceholderImage(3) },
   ];
 
   return (
     <div ref={fadeRef}>
       {/* ══════════════ HERO ══════════════ */}
       <section className="min-h-[90vh] md:min-h-screen flex flex-col md:flex-row">
-        {/* Left — Image */}
         <div className="relative w-full md:w-[55%] min-h-[50vh] md:min-h-full grain-overlay">
           <img
-            src={getPlaceholderImage(1200, 900, "Hero", 0)}
+            src={getPlaceholderImage(0)}
             alt="Villalobos Western Hats"
             className="absolute inset-0 w-full h-full object-cover"
           />
         </div>
-
-        {/* Right — Content */}
         <div className="w-full md:w-[45%] flex flex-col justify-center px-6 md:px-12 lg:px-16 py-12 md:py-0">
           <span className="font-body text-xs tracking-[0.3em] uppercase text-accent mb-4">{t("hero.label")}</span>
           <h1 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight mb-6">
@@ -158,11 +173,37 @@ const Index = () => {
       <section className="py-16 md:py-20 fade-in-section">
         <div className="container">
           <h2 className="font-display text-2xl md:text-3xl font-bold text-center mb-12">{t("featured.title")}</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featured.map((product, i) => (
-              <ProductCard key={product.id} product={product} index={i} />
-            ))}
-          </div>
+
+          {/* Loading skeleton */}
+          {loadingProducts && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="rounded-lg bg-card animate-pulse">
+                  <div className="aspect-[3/4] bg-muted rounded-t-lg" />
+                  <div className="p-4 space-y-2">
+                    <div className="h-4 bg-muted rounded w-3/4" />
+                    <div className="h-4 bg-muted rounded w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Sin productos */}
+          {!loadingProducts && featured.length === 0 && (
+            <p className="text-center font-body text-muted-foreground py-12">
+              Aún no hay productos disponibles.
+            </p>
+          )}
+
+          {/* Grid de productos */}
+          {!loadingProducts && featured.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {featured.map((product, i) => (
+                <ProductCard key={product.id} product={product} index={i} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -171,7 +212,7 @@ const Index = () => {
         <div className="container">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
             <img
-              src={getPlaceholderImage(600, 800, "About", 5)}
+              src={getPlaceholderImage(5)}
               alt="Villalobos Western Hats"
               className="rounded-lg w-full aspect-[3/4] object-cover"
             />

@@ -47,14 +47,16 @@ const Footer = () => {
           {/* Col 3 — Contact & Payment */}
           <div className="space-y-4">
             <h4 className="font-display text-lg">WhatsApp</h4>
-            <a href="https://wa.me/5211234567890" className="font-body text-sm opacity-70 hover:opacity-100 transition-opacity block">
-              +52 1 123 456 7890
+            <a href="https://wa.me/524776385016" className="font-body text-sm opacity-70 hover:opacity-100 transition-opacity block">
+              +52 477 638 5016
             </a>
             <p className="font-body text-sm opacity-70">info@villaloboswestern.com</p>
-            <div className="flex gap-2 mt-4">
-              <span className="bg-footer-fg/10 text-footer-fg text-xs font-body px-3 py-1 rounded">Stripe</span>
-              <span className="bg-footer-fg/10 text-footer-fg text-xs font-body px-3 py-1 rounded">Visa</span>
-              <span className="bg-footer-fg/10 text-footer-fg text-xs font-body px-3 py-1 rounded">Mastercard</span>
+            <div className="flex gap-3 mt-4 items-center flex-wrap">
+              <img src="/images/payments/VISA-SVG.webp" alt="Visa" className="h-7 opacity-80 hover:opacity-100 transition-opacity" />
+              <img src="/images/payments/MASTERCARD-SVG.webp" alt="Mastercard" className="h-7 opacity-80 hover:opacity-100 transition-opacity" />
+              <img src="/images/payments/AMERICAN EXPRESS-SVG.webp" alt="American Express" className="h-7 opacity-80 hover:opacity-100 transition-opacity" />
+              <img src="/images/payments/APPLE PAY-SVG.webp" alt="Apple Pay" className="h-7 opacity-80 hover:opacity-100 transition-opacity" />
+              <img src="/images/payments/GOOGLE PAY-SVG.webp" alt="Google Pay" className="h-7 opacity-80 hover:opacity-100 transition-opacity" />
             </div>
           </div>
         </div>

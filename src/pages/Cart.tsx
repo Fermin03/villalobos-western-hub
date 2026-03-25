@@ -77,10 +77,12 @@ const Cart = () => {
           >
             {t("cart.checkout")}
           </Link>
-          <div className="flex gap-2 justify-center mt-4">
-            <span className="bg-muted text-muted-foreground text-xs font-body px-3 py-1 rounded">Stripe</span>
-            <span className="bg-muted text-muted-foreground text-xs font-body px-3 py-1 rounded">Visa</span>
-            <span className="bg-muted text-muted-foreground text-xs font-body px-3 py-1 rounded">Mastercard</span>
+          <div className="flex gap-3 justify-center mt-4 items-center flex-wrap">
+            <img src="/images/payments/VISA-SVG.webp" alt="Visa" className="h-6 opacity-60" />
+            <img src="/images/payments/MASTERCARD-SVG.webp" alt="Mastercard" className="h-6 opacity-60" />
+            <img src="/images/payments/AMERICAN EXPRESS-SVG.webp" alt="American Express" className="h-6 opacity-60" />
+            <img src="/images/payments/APPLE PAY-SVG.webp" alt="Apple Pay" className="h-6 opacity-60" />
+            <img src="/images/payments/GOOGLE PAY-SVG.webp" alt="Google Pay" className="h-6 opacity-60" />
           </div>
         </div>
       </div>

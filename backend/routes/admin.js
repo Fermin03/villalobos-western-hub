@@ -22,7 +22,7 @@ function verificarToken(req, res, next) {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.admin = payload; // Adjuntar datos del admin a la request
+    req.admin = payload;
     next();
   } catch (error) {
     return res.status(403).json({ ok: false, mensaje: 'Token inválido o expirado' });
@@ -34,12 +34,10 @@ function verificarToken(req, res, next) {
 // ============================================================
 
 // --- POST /api/admin/login ---
-// Inicia sesión del administrador y devuelve un JWT
 router.post('/login', async (req, res) => {
   try {
     const { correo, password } = req.body;
 
-    // Buscar admin en la base de datos
     const [rows] = await pool.query(
       'SELECT * FROM admins WHERE correo = ? AND activo = 1',
       [correo]
@@ -50,14 +48,11 @@ router.post('/login', async (req, res) => {
     }
 
     const admin = rows[0];
-
-    // Verificar contraseña con bcrypt
     const passwordValida = await bcrypt.compare(password, admin.password_hash);
     if (!passwordValida) {
       return res.status(401).json({ ok: false, mensaje: 'Credenciales incorrectas' });
     }
 
-    // Generar JWT con duración de 8 horas
     const token = jwt.sign(
       { id: admin.id, correo: admin.correo, nombre: admin.nombre },
       process.env.JWT_SECRET,
@@ -77,12 +72,9 @@ router.post('/login', async (req, res) => {
 // ============================================================
 
 // --- GET /api/admin/productos ---
-// Lista todos los productos incluyendo los inactivos
 router.get('/productos', verificarToken, async (req, res) => {
   try {
-    const [productos] = await pool.query(
-      'SELECT * FROM productos ORDER BY id DESC'
-    );
+    const [productos] = await pool.query('SELECT * FROM productos ORDER BY id DESC');
     res.json({ ok: true, data: productos });
   } catch (error) {
     console.error('❌ Error al obtener productos admin:', error.message);
@@ -91,7 +83,6 @@ router.get('/productos', verificarToken, async (req, res) => {
 });
 
 // --- POST /api/admin/productos ---
-// Crea un nuevo producto
 router.post('/productos', verificarToken, async (req, res) => {
   try {
     const {
@@ -127,13 +118,11 @@ router.post('/productos', verificarToken, async (req, res) => {
 });
 
 // --- PUT /api/admin/productos/:id ---
-// Actualiza un producto existente
 router.put('/productos/:id', verificarToken, async (req, res) => {
   try {
     const { id } = req.params;
     const campos = req.body;
 
-    // Serializar arrays a JSON si vienen en el body
     if (campos.imagenes) campos.imagenes = JSON.stringify(campos.imagenes);
     if (campos.tallas)   campos.tallas   = JSON.stringify(campos.tallas);
     if (campos.colores)  campos.colores  = JSON.stringify(campos.colores);
@@ -149,16 +138,89 @@ router.put('/productos/:id', verificarToken, async (req, res) => {
 });
 
 // ============================================================
+// CATEGORÍAS (protegido)
+// ============================================================
+
+// --- GET /api/admin/categorias ---
+// Lista todas las categorías (para admin y para la tienda)
+router.get('/categorias', async (req, res) => {
+  // Esta ruta es pública — el catálogo la necesita sin token
+  try {
+    const [categorias] = await pool.query(
+      'SELECT * FROM categorias WHERE activo = 1 ORDER BY nombre ASC'
+    );
+    res.json({ ok: true, data: categorias });
+  } catch (error) {
+    console.error('❌ Error al obtener categorías:', error.message);
+    res.status(500).json({ ok: false, mensaje: 'Error al obtener categorías' });
+  }
+});
+
+// --- POST /api/admin/categorias ---
+// Crea una nueva categoría
+router.post('/categorias', verificarToken, async (req, res) => {
+  try {
+    const { nombre } = req.body;
+
+    if (!nombre || nombre.trim() === '') {
+      return res.status(400).json({ ok: false, mensaje: 'El nombre es requerido' });
+    }
+
+    const [resultado] = await pool.query(
+      'INSERT INTO categorias (nombre) VALUES (?)',
+      [nombre.trim()]
+    );
+
+    res.json({ ok: true, mensaje: 'Categoría creada', id: resultado.insertId });
+
+  } catch (error) {
+    // Error de duplicado (nombre único)
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ ok: false, mensaje: 'Ya existe una categoría con ese nombre' });
+    }
+    console.error('❌ Error al crear categoría:', error.message);
+    res.status(500).json({ ok: false, mensaje: 'Error al crear categoría' });
+  }
+});
+
+// --- DELETE /api/admin/categorias/:id ---
+// Desactiva una categoría (no la elimina para no romper productos existentes)
+router.delete('/categorias/:id', verificarToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar que no haya productos activos usando esta categoría
+    const [productos] = await pool.query(
+      `SELECT COUNT(*) as total FROM productos 
+       WHERE categoria = (SELECT nombre FROM categorias WHERE id = ?) AND activo = 1`,
+      [id]
+    );
+
+    if (productos[0].total > 0) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: `No se puede eliminar — hay ${productos[0].total} producto(s) usando esta categoría`
+      });
+    }
+
+    await pool.query('UPDATE categorias SET activo = 0 WHERE id = ?', [id]);
+
+    res.json({ ok: true, mensaje: 'Categoría eliminada' });
+
+  } catch (error) {
+    console.error('❌ Error al eliminar categoría:', error.message);
+    res.status(500).json({ ok: false, mensaje: 'Error al eliminar categoría' });
+  }
+});
+
+// ============================================================
 // PEDIDOS (protegido)
 // ============================================================
 
 // --- GET /api/admin/pedidos ---
-// Lista todos los pedidos con sus detalles
 router.get('/pedidos', verificarToken, async (req, res) => {
   try {
-    const [pedidos] = await pool.query(
-      'SELECT * FROM pedidos ORDER BY created_at DESC'
-    );
+    const [pedidos] = await pool.query('SELECT * FROM pedidos ORDER BY created_at DESC');
     res.json({ ok: true, data: pedidos });
   } catch (error) {
     console.error('❌ Error al obtener pedidos:', error.message);
@@ -167,7 +229,6 @@ router.get('/pedidos', verificarToken, async (req, res) => {
 });
 
 // --- PUT /api/admin/pedidos/:id/estado ---
-// Actualiza el estado de un pedido (pagado, enviado, entregado, cancelado)
 router.put('/pedidos/:id/estado', verificarToken, async (req, res) => {
   try {
     const { id } = req.params;

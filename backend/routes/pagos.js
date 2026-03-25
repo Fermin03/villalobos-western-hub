@@ -1,6 +1,6 @@
 // ============================================================
 // routes/pagos.js — API de pagos con Stripe
-// Crea Payment Intents y confirma transacciones
+// Soporta: Tarjeta (débito/crédito), OXXOPay, Apple Pay, Google Pay
 // ============================================================
 
 const express = require('express');
@@ -12,7 +12,7 @@ const pool = require('../config/database');
 // Crea un Payment Intent en Stripe y devuelve el clientSecret al frontend
 router.post('/crear-intento', async (req, res) => {
   try {
-    const { items, correo, tipo_cliente } = req.body;
+    const { items, correo, tipo_cliente, metodo_pago } = req.body;
 
     // Validar que vengan productos
     if (!items || items.length === 0) {
@@ -38,7 +38,7 @@ router.post('/crear-intento', async (req, res) => {
         return res.status(400).json({ ok: false, mensaje: `Stock insuficiente para producto ${item.id}` });
       }
 
-      // Usar precio mayoreo si aplica (más de 6 piezas)
+      // Usar precio mayoreo si aplica
       const precio = (tipo_cliente === 'mayoreo' && producto.precio_mayoreo)
         ? producto.precio_mayoreo
         : producto.precio;
@@ -49,21 +49,45 @@ router.post('/crear-intento', async (req, res) => {
     // Stripe maneja montos en centavos
     const totalCentavos = Math.round(total * 100);
 
+    // ── Determinar métodos de pago según lo que solicita el frontend ──
+    // OXXO requiere su propio payment_method_types exclusivo (no se mezcla con card)
+    let paymentMethodTypes;
+
+    if (metodo_pago === 'oxxo') {
+      paymentMethodTypes = ['oxxo'];
+    } else {
+      // Tarjeta: soporta card (incluye Apple Pay y Google Pay en el frontend)
+      paymentMethodTypes = ['card'];
+    }
+
     // Crear Payment Intent en Stripe
     const paymentIntent = await stripe.paymentIntents.create({
       amount: totalCentavos,
-      currency: 'mxn',               // Pesos mexicanos
-      receipt_email: correo,
+      currency: 'mxn',
+      payment_method_types: paymentMethodTypes,
+      receipt_email: correo || undefined,
+
+      // OXXO requiere estos datos para generar el voucher
+      ...(metodo_pago === 'oxxo' && {
+        payment_method_options: {
+          oxxo: {
+            expires_after_days: 3, // El voucher vence en 3 días
+          },
+        },
+      }),
+
       metadata: {
         tipo_cliente: tipo_cliente || 'menudeo',
-        num_productos: items.length.toString()
-      }
+        metodo_pago: metodo_pago || 'card',
+        num_productos: items.length.toString(),
+      },
     });
 
     res.json({
       ok: true,
       clientSecret: paymentIntent.client_secret,
-      total: total
+      total: total,
+      metodo_pago: metodo_pago || 'card',
     });
 
   } catch (error) {
@@ -73,7 +97,7 @@ router.post('/crear-intento', async (req, res) => {
 });
 
 // --- POST /api/pagos/webhook ---
-// Recibe eventos de Stripe (pago confirmado, fallido, etc.)
+// Recibe eventos de Stripe (pago confirmado, fallido, OXXO pagado, etc.)
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   let evento;
@@ -89,11 +113,34 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     return res.status(400).json({ mensaje: `Webhook Error: ${error.message}` });
   }
 
-  // Manejar evento de pago exitoso
+  // Pago con tarjeta exitoso
   if (evento.type === 'payment_intent.succeeded') {
     const paymentIntent = evento.data.object;
     console.log(`✅ Pago exitoso: ${paymentIntent.id}`);
-    // Aquí se actualiza el pedido en la base de datos (lo conectamos desde pedidos.js)
+
+    // Actualizar pedido a 'pagado' si existe en la BD
+    try {
+      await pool.query(
+        "UPDATE pedidos SET estado = 'pagado' WHERE stripe_payment_id = ?",
+        [paymentIntent.id]
+      );
+    } catch (err) {
+      console.error('❌ Error al actualizar pedido tras webhook:', err.message);
+    }
+  }
+
+  // OXXO pagado en tienda — Stripe notifica cuando el cliente pagó en OXXO
+  if (evento.type === 'payment_intent.payment_failed') {
+    const paymentIntent = evento.data.object;
+    console.log(`❌ Pago fallido: ${paymentIntent.id}`);
+  }
+
+  // OXXO: voucher generado y pendiente de pago
+  if (evento.type === 'payment_intent.requires_action') {
+    const paymentIntent = evento.data.object;
+    if (paymentIntent.payment_method_types?.includes('oxxo')) {
+      console.log(`🏪 Voucher OXXO generado: ${paymentIntent.id}`);
+    }
   }
 
   res.json({ recibido: true });
