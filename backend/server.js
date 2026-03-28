@@ -12,6 +12,7 @@ const rutasProductos = require('./routes/productos');
 const rutasPagos = require('./routes/pagos');
 const rutasPedidos = require('./routes/pedidos');
 const rutasAdmin = require('./routes/admin');
+const rutasContacto = require('./routes/contacto');
 
 // --- Inicializar app ---
 const app = express();
@@ -29,6 +30,7 @@ app.use('/api/productos', rutasProductos);
 app.use('/api/pagos', rutasPagos);
 app.use('/api/pedidos', rutasPedidos);
 app.use('/api/admin', rutasAdmin);
+app.use('/api/contacto', rutasContacto);
 
 // --- Ruta de prueba para verificar que el servidor corre ---
 app.get('/api/health', (req, res) => {
