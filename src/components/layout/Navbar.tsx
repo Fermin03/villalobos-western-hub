@@ -54,7 +54,7 @@ const Navbar = () => {
   const [cargando, setCargando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Cargar productos al abrir modal (solo una vez)
+  // Cargar productos al abrir modal
   useEffect(() => {
     if (searchOpen && allProducts.length === 0) {
       setCargando(true);
@@ -152,23 +152,88 @@ const Navbar = () => {
             </div>
 
             {/* Hamburguesa */}
-            <button className="lg:hidden text-foreground hover:text-accent transition-colors" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Menu">
+            <button
+              className="lg:hidden text-foreground hover:text-accent transition-colors"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="Menu"
+            >
               {mobileOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </nav>
-
-        {/* Menú móvil */}
-        {mobileOpen && (
-          <div className="lg:hidden fixed inset-0 top-[calc(4rem+1px)] bg-background z-40 flex flex-col items-center justify-center gap-8 animate-[fade-up_0.3s_ease-out]">
-            {navLinks.map((link) => (
-              <Link key={link.key} to={link.path} onClick={() => setMobileOpen(false)} className={`font-display text-2xl tracking-wide transition-colors ${location.pathname === link.path ? "text-accent" : "text-foreground"}`}>
-                {t(link.key)}
-              </Link>
-            ))}
-          </div>
-        )}
       </header>
+
+      {/* ══════════════ MENÚ MÓVIL — Drawer lateral derecho ══════════════ */}
+      {mobileOpen && (
+        <>
+          {/* Overlay oscuro */}
+          <div
+            className="lg:hidden fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
+
+          {/* Panel lateral */}
+          <div className="lg:hidden fixed top-0 right-0 h-full w-[280px] bg-primary z-50 flex flex-col shadow-2xl"
+            style={{ animation: 'slideInRight 0.25s ease-out' }}
+          >
+            {/* Header del drawer */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
+              <VillalobosLogo className="h-8 w-auto text-background" />
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="text-background/70 hover:text-background transition-colors"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* Links de navegación */}
+            <nav className="flex-1 flex flex-col px-4 py-6 gap-1 overflow-y-auto">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.key}
+                  to={link.path}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center px-4 py-3.5 rounded-lg font-body text-sm tracking-widest uppercase transition-all ${
+                    location.pathname === link.path
+                      ? "bg-white/15 text-background font-semibold"
+                      : "text-background/75 hover:bg-white/10 hover:text-background"
+                  }`}
+                >
+                  {t(link.key)}
+                </Link>
+              ))}
+            </nav>
+
+            {/* Footer del drawer — idioma */}
+            <div className="px-6 py-5 border-t border-white/10">
+              <p className="text-background/40 text-xs uppercase tracking-widest mb-3 font-body">Idioma</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setLang("es")}
+                  className={`flex-1 py-2 rounded-lg font-body text-sm font-medium transition-all ${
+                    lang === "es"
+                      ? "bg-background text-primary"
+                      : "bg-white/10 text-background/70 hover:bg-white/20 hover:text-background"
+                  }`}
+                >
+                  Español
+                </button>
+                <button
+                  onClick={() => setLang("en")}
+                  className={`flex-1 py-2 rounded-lg font-body text-sm font-medium transition-all ${
+                    lang === "en"
+                      ? "bg-background text-primary"
+                      : "bg-white/10 text-background/70 hover:bg-white/20 hover:text-background"
+                  }`}
+                >
+                  English
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ══════════════ MODAL BUSCADOR ══════════════ */}
       {searchOpen && (
@@ -198,21 +263,17 @@ const Navbar = () => {
 
             {/* Resultados */}
             <div className="max-h-[60vh] overflow-y-auto">
-
               {cargando && (
                 <p className="font-body text-sm text-muted-foreground text-center py-8">Cargando productos...</p>
               )}
-
               {!cargando && !query.trim() && (
                 <p className="font-body text-sm text-muted-foreground text-center py-10">Escribe para buscar sombreros... 🤠</p>
               )}
-
               {!cargando && query.trim() && resultados.length === 0 && (
                 <p className="font-body text-sm text-muted-foreground text-center py-10">
                   Sin resultados para <strong>"{query}"</strong>
                 </p>
               )}
-
               {!cargando && resultados.length > 0 && (
                 <ul>
                   {resultados.map((p) => (
@@ -221,7 +282,6 @@ const Navbar = () => {
                         onClick={() => handleProductoClick(p.slug)}
                         className="w-full flex items-center gap-4 px-5 py-3 hover:bg-card transition-colors text-left"
                       >
-                        {/* Miniatura */}
                         <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-muted">
                           <img
                             src={p.imagen_principal || `https://placehold.co/48x48/4A3728/F5EFE0?text=🤠`}
@@ -229,20 +289,16 @@ const Navbar = () => {
                             className="w-full h-full object-cover"
                           />
                         </div>
-                        {/* Info */}
                         <div className="flex-1 min-w-0">
                           <p className="font-body font-semibold text-sm text-foreground truncate">{p.nombre}</p>
                           <p className="font-body text-xs text-muted-foreground">{p.marca} · {p.categoria}</p>
                         </div>
-                        {/* Precio */}
                         <p className="font-body text-sm font-semibold text-primary shrink-0">
                           ${p.precio.toLocaleString("es-MX")} MXN
                         </p>
                       </button>
                     </li>
                   ))}
-
-                  {/* Ver todos */}
                   <li className="border-t border-border">
                     <button onClick={handleVerTodos} className="w-full py-3 font-body text-sm text-accent hover:text-accent/80 transition-colors font-medium">
                       Ver todos los resultados para "{query}" →
@@ -254,6 +310,14 @@ const Navbar = () => {
           </div>
         </div>
       )}
+
+      {/* Animación del drawer */}
+      <style>{`
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `}</style>
     </>
   );
 };

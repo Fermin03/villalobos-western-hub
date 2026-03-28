@@ -27,6 +27,7 @@ import AdminLogin from "./pages/admin/Login";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProductos from "./pages/admin/Productos";
 import AdminPedidos from "./pages/admin/Pedidos";
+import AdminAdmins from "./pages/admin/Admins";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ const App = () => (
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/productos" element={<AdminProductos />} />
               <Route path="/admin/pedidos" element={<AdminPedidos />} />
+              <Route path="/admin/admins" element={<AdminAdmins />} />
 
               {/* Ruta 404 */}
               <Route path="*" element={<NotFound />} />

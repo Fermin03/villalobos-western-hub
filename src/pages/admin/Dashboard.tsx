@@ -37,7 +37,6 @@ export default function AdminDashboard() {
     try {
       const headers = { Authorization: `Bearer ${token}` };
 
-      // Cargar productos y pedidos en paralelo
       const [resProductos, resPedidos] = await Promise.all([
         fetch(`${API_URL}/admin/productos`, { headers }),
         fetch(`${API_URL}/admin/pedidos`, { headers }),
@@ -49,7 +48,7 @@ export default function AdminDashboard() {
       if (dataProductos.ok) setTotalProductos(dataProductos.data.length);
       if (dataPedidos.ok) {
         setTotalPedidos(dataPedidos.data.length);
-        setPedidosRecientes(dataPedidos.data.slice(0, 5)); // Últimos 5 pedidos
+        setPedidosRecientes(dataPedidos.data.slice(0, 5));
       }
 
     } catch (error) {
@@ -106,7 +105,7 @@ export default function AdminDashboard() {
 
         {/* Tarjetas de resumen */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-          
+
           {/* Total productos */}
           <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' }}>
             <p style={{ color: '#999', fontSize: '13px', margin: '0 0 8px' }}>PRODUCTOS</p>
@@ -121,8 +120,18 @@ export default function AdminDashboard() {
             <Link to="/admin/pedidos" style={{ color: '#6B7A3E', fontSize: '13px', textDecoration: 'none' }}>Ver todos →</Link>
           </div>
 
-          {/* Acceso rápido — agregar producto */}
-          <div style={{ background: '#4A3728', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.07)', cursor: 'pointer' }} onClick={() => navigate('/admin/productos')}>
+          {/* Administradores */}
+          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' }}>
+            <p style={{ color: '#999', fontSize: '13px', margin: '0 0 8px' }}>ADMINISTRADORES</p>
+            <p style={{ color: '#4A3728', fontSize: '36px', fontWeight: 700, margin: 0 }}>👤</p>
+            <Link to="/admin/admins" style={{ color: '#6B7A3E', fontSize: '13px', textDecoration: 'none' }}>Gestionar →</Link>
+          </div>
+
+          {/* Acción rápida — agregar producto */}
+          <div
+            style={{ background: '#4A3728', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.07)', cursor: 'pointer' }}
+            onClick={() => navigate('/admin/productos')}
+          >
             <p style={{ color: '#C9A84C', fontSize: '13px', margin: '0 0 8px' }}>ACCIÓN RÁPIDA</p>
             <p style={{ color: '#F5EFE0', fontSize: '18px', fontWeight: 600, margin: 0 }}>+ Agregar Producto</p>
           </div>
