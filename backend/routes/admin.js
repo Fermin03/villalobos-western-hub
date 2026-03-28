@@ -169,6 +169,54 @@ router.post('/login', async (req, res) => {
 });
 
 // ============================================================
+// CATEGORÍAS
+// ============================================================
+
+// --- GET /api/admin/categorias — Pública para catálogo y admin ---
+router.get('/categorias', async (req, res) => {
+  try {
+    const [categorias] = await pool.query(
+      'SELECT * FROM categorias ORDER BY nombre ASC'
+    );
+    res.json({ ok: true, data: categorias });
+  } catch (error) {
+    console.error('❌ Error al obtener categorías:', error.message);
+    res.status(500).json({ ok: false, mensaje: 'Error al obtener categorías' });
+  }
+});
+
+// --- POST /api/admin/categorias — Crear nueva categoría ---
+router.post('/categorias', verificarToken, async (req, res) => {
+  try {
+    const { nombre } = req.body;
+    if (!nombre) return res.status(400).json({ ok: false, mensaje: 'Nombre requerido' });
+
+    const [resultado] = await pool.query(
+      'INSERT INTO categorias (nombre) VALUES (?)', [nombre]
+    );
+    res.json({ ok: true, mensaje: 'Categoría creada', id: resultado.insertId });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ ok: false, mensaje: 'Ya existe esa categoría' });
+    }
+    console.error('❌ Error al crear categoría:', error.message);
+    res.status(500).json({ ok: false, mensaje: 'Error al crear categoría' });
+  }
+});
+
+// --- DELETE /api/admin/categorias/:id — Eliminar categoría ---
+router.delete('/categorias/:id', verificarToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM categorias WHERE id = ?', [id]);
+    res.json({ ok: true, mensaje: 'Categoría eliminada' });
+  } catch (error) {
+    console.error('❌ Error al eliminar categoría:', error.message);
+    res.status(500).json({ ok: false, mensaje: 'Error al eliminar categoría' });
+  }
+});
+
+// ============================================================
 // PRODUCTOS (protegido)
 // ============================================================
 
@@ -347,7 +395,6 @@ router.get('/mayoreo', verificarToken, async (req, res) => {
 // ADMINISTRADORES (protegido)
 // ============================================================
 
-// --- GET /api/admin/admins ---
 router.get('/admins', verificarToken, async (req, res) => {
   try {
     const [admins] = await pool.query(
@@ -360,7 +407,6 @@ router.get('/admins', verificarToken, async (req, res) => {
   }
 });
 
-// --- POST /api/admin/admins ---
 router.post('/admins', verificarToken, async (req, res) => {
   try {
     const { nombre, correo, password } = req.body;
@@ -369,13 +415,11 @@ router.post('/admins', verificarToken, async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: 'Faltan campos requeridos' });
     }
 
-    // Verificar que el correo no exista
     const [existe] = await pool.query('SELECT id FROM admins WHERE correo = ?', [correo]);
     if (existe.length > 0) {
       return res.status(400).json({ ok: false, mensaje: 'Ya existe un admin con ese correo' });
     }
 
-    // Hashear contraseña
     const password_hash = await bcrypt.hash(password, 10);
 
     const [resultado] = await pool.query(
@@ -391,7 +435,6 @@ router.post('/admins', verificarToken, async (req, res) => {
   }
 });
 
-// --- PUT /api/admin/admins/:id ---
 router.put('/admins/:id', verificarToken, async (req, res) => {
   try {
     const { id } = req.params;

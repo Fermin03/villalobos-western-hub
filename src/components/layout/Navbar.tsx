@@ -1,10 +1,9 @@
 /**
- * NAVBAR STICKY — Logo SVG real, links de navegación, búsqueda modal, carrito, toggle ES/EN.
- * Búsqueda: modal overlay con resultados en tiempo real por nombre, marca y tipo.
+ * NAVBAR STICKY — Logo SVG real, links de navegación, búsqueda modal, carrito con preview hover.
  */
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, ShoppingBag, Menu, X } from "lucide-react";
+import { Search, ShoppingBag, Menu, X, Trash2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCart } from "@/contexts/CartContext";
 import { getProducts } from "@/data/products";
@@ -19,7 +18,6 @@ const navLinks = [
   { key: "nav.contact", path: "/contacto" },
 ];
 
-// ── Logo SVG real de Villalobos Western Hats ──
 const VillalobosLogo = ({ className }: { className?: string }) => (
   <svg
     className={className}
@@ -41,10 +39,12 @@ const VillalobosLogo = ({ className }: { className?: string }) => (
 
 const Navbar = () => {
   const { t, lang, setLang } = useLanguage();
-  const { itemCount } = useCart();
+  const { items, itemCount, subtotal, removeItem } = useCart();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [carritoHover, setCarritoHover] = useState(false);
+  const carritoTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Estado del buscador ──
   const [searchOpen, setSearchOpen] = useState(false);
@@ -101,13 +101,23 @@ const Navbar = () => {
     navigate(`/catalogo?q=${encodeURIComponent(query.trim())}`);
   }
 
+  // --- Manejo del hover del carrito con delay ---
+  function handleCarritoEnter() {
+    if (carritoTimeout.current) clearTimeout(carritoTimeout.current);
+    setCarritoHover(true);
+  }
+
+  function handleCarritoLeave() {
+    carritoTimeout.current = setTimeout(() => setCarritoHover(false), 200);
+  }
+
   return (
     <>
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
         <nav className="container flex items-center justify-between h-16 md:h-20">
 
           {/* Logo */}
-          <Link to="/" className="flex items-center shrink-0" onClick={() => setMobileOpen(false)} aria-label="Villalobos Western Hats">
+          <Link to="/" className="flex items-center shrink-0" onClick={() => setMobileOpen(false)}>
             <VillalobosLogo className="h-10 md:h-12 w-auto text-primary" />
           </Link>
 
@@ -130,19 +140,113 @@ const Navbar = () => {
           <div className="flex items-center gap-3 md:gap-4">
 
             {/* Búsqueda */}
-            <button onClick={() => setSearchOpen(true)} className="text-foreground hover:text-accent transition-colors" aria-label="Buscar">
+            <button onClick={() => setSearchOpen(true)} className="text-foreground hover:text-accent transition-colors">
               <Search size={20} />
             </button>
 
-            {/* Carrito */}
-            <Link to="/carrito" className="relative text-foreground hover:text-accent transition-colors">
-              <ShoppingBag size={20} />
-              {itemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-accent text-accent-foreground text-[10px] font-body font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                  {itemCount}
-                </span>
+            {/* Carrito con mini preview */}
+            <div
+              className="relative"
+              onMouseEnter={handleCarritoEnter}
+              onMouseLeave={handleCarritoLeave}
+            >
+              <Link to="/carrito" className="relative text-foreground hover:text-accent transition-colors block">
+                <ShoppingBag size={20} />
+                {itemCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-accent text-accent-foreground text-[10px] font-body font-bold w-5 h-5 rounded-full flex items-center justify-center animate-bounce">
+                    {itemCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Mini carrito dropdown */}
+              {carritoHover && (
+                <div
+                  className="absolute right-0 top-full mt-3 w-80 bg-background rounded-xl shadow-2xl border border-border z-50"
+                  style={{ animation: 'fadeInDown 0.2s ease-out' }}
+                  onMouseEnter={handleCarritoEnter}
+                  onMouseLeave={handleCarritoLeave}
+                >
+                  {/* Flecha decorativa */}
+                  <div className="absolute -top-2 right-3 w-4 h-4 bg-background border-l border-t border-border rotate-45" />
+
+                  <div className="p-4">
+                    <p className="font-display text-sm font-semibold text-primary mb-3 tracking-wide uppercase">
+                      Mi Carrito {itemCount > 0 && `(${itemCount})`}
+                    </p>
+
+                    {items.length === 0 ? (
+                      <div className="text-center py-6">
+                        <ShoppingBag size={32} className="mx-auto mb-2 text-muted-foreground opacity-30" />
+                        <p className="font-body text-sm text-muted-foreground">Tu carrito está vacío</p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Lista de productos */}
+                        <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
+                          {items.map((item) => (
+                            <div key={`${item.id}-${item.size}`} className="flex gap-3 items-start">
+                              {/* Imagen */}
+                              <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-muted">
+                                <img
+                                  src={item.image || 'https://placehold.co/48x48/4A3728/F5EFE0?text=🤠'}
+                                  alt={item.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              {/* Info */}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-body text-xs font-semibold text-foreground truncate">{item.name}</p>
+                                <p className="font-body text-xs text-muted-foreground">{item.brand} · Talla {item.size}</p>
+                                <p className="font-body text-xs text-muted-foreground">x{item.quantity}</p>
+                              </div>
+                              {/* Precio y eliminar */}
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                <p className="font-body text-xs font-bold text-primary">
+                                  ${(item.price * item.quantity).toLocaleString()} MXN
+                                </p>
+                                <button
+                                  onClick={(e) => { e.preventDefault(); removeItem(item.id, item.size); }}
+                                  className="text-muted-foreground hover:text-red-500 transition-colors"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Total y botones */}
+                        <div className="border-t border-border mt-3 pt-3">
+                          <div className="flex justify-between items-center mb-3">
+                            <span className="font-body text-sm text-muted-foreground">Subtotal</span>
+                            <span className="font-body text-sm font-bold text-primary">
+                              ${subtotal.toLocaleString()} MXN
+                            </span>
+                          </div>
+                          <div className="flex gap-2">
+                            <Link
+                              to="/carrito"
+                              onClick={() => setCarritoHover(false)}
+                              className="flex-1 py-2 border border-primary text-primary font-body text-xs font-medium rounded-lg text-center hover:bg-primary hover:text-primary-foreground transition-colors"
+                            >
+                              Ver carrito
+                            </Link>
+                            <Link
+                              to="/checkout"
+                              onClick={() => setCarritoHover(false)}
+                              className="flex-1 py-2 bg-primary text-primary-foreground font-body text-xs font-medium rounded-lg text-center hover:opacity-90 transition-opacity"
+                            >
+                              Pagar ahora
+                            </Link>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
               )}
-            </Link>
+            </div>
 
             {/* Idioma */}
             <div className="flex items-center gap-1 font-body text-sm">
@@ -155,7 +259,6 @@ const Navbar = () => {
             <button
               className="lg:hidden text-foreground hover:text-accent transition-colors"
               onClick={() => setMobileOpen(!mobileOpen)}
-              aria-label="Menu"
             >
               {mobileOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -163,31 +266,21 @@ const Navbar = () => {
         </nav>
       </header>
 
-      {/* ══════════════ MENÚ MÓVIL — Drawer lateral derecho ══════════════ */}
+      {/* ══════════════ MENÚ MÓVIL ══════════════ */}
       {mobileOpen && (
         <>
-          {/* Overlay oscuro */}
+          <div className="lg:hidden fixed inset-0 bg-black/60 z-40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
           <div
-            className="lg:hidden fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
-            onClick={() => setMobileOpen(false)}
-          />
-
-          {/* Panel lateral */}
-          <div className="lg:hidden fixed top-0 right-0 h-full w-[280px] bg-primary z-50 flex flex-col shadow-2xl"
+            className="lg:hidden fixed top-0 right-0 h-full w-[280px] bg-primary z-50 flex flex-col shadow-2xl"
             style={{ animation: 'slideInRight 0.25s ease-out' }}
           >
-            {/* Header del drawer */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
               <VillalobosLogo className="h-8 w-auto text-background" />
-              <button
-                onClick={() => setMobileOpen(false)}
-                className="text-background/70 hover:text-background transition-colors"
-              >
+              <button onClick={() => setMobileOpen(false)} className="text-background/70 hover:text-background transition-colors">
                 <X size={22} />
               </button>
             </div>
 
-            {/* Links de navegación */}
             <nav className="flex-1 flex flex-col px-4 py-6 gap-1 overflow-y-auto">
               {navLinks.map((link) => (
                 <Link
@@ -205,28 +298,13 @@ const Navbar = () => {
               ))}
             </nav>
 
-            {/* Footer del drawer — idioma */}
             <div className="px-6 py-5 border-t border-white/10">
               <p className="text-background/40 text-xs uppercase tracking-widest mb-3 font-body">Idioma</p>
               <div className="flex gap-2">
-                <button
-                  onClick={() => setLang("es")}
-                  className={`flex-1 py-2 rounded-lg font-body text-sm font-medium transition-all ${
-                    lang === "es"
-                      ? "bg-background text-primary"
-                      : "bg-white/10 text-background/70 hover:bg-white/20 hover:text-background"
-                  }`}
-                >
+                <button onClick={() => setLang("es")} className={`flex-1 py-2 rounded-lg font-body text-sm font-medium transition-all ${lang === "es" ? "bg-background text-primary" : "bg-white/10 text-background/70 hover:bg-white/20 hover:text-background"}`}>
                   Español
                 </button>
-                <button
-                  onClick={() => setLang("en")}
-                  className={`flex-1 py-2 rounded-lg font-body text-sm font-medium transition-all ${
-                    lang === "en"
-                      ? "bg-background text-primary"
-                      : "bg-white/10 text-background/70 hover:bg-white/20 hover:text-background"
-                  }`}
-                >
+                <button onClick={() => setLang("en")} className={`flex-1 py-2 rounded-lg font-body text-sm font-medium transition-all ${lang === "en" ? "bg-background text-primary" : "bg-white/10 text-background/70 hover:bg-white/20 hover:text-background"}`}>
                   English
                 </button>
               </div>
@@ -238,14 +316,8 @@ const Navbar = () => {
       {/* ══════════════ MODAL BUSCADOR ══════════════ */}
       {searchOpen && (
         <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[10vh] px-4">
-
-          {/* Fondo oscuro */}
           <div className="absolute inset-0 bg-foreground/50 backdrop-blur-sm" onClick={cerrarBuscador} />
-
-          {/* Panel */}
           <div className="relative w-full max-w-xl bg-background rounded-xl shadow-2xl overflow-hidden animate-[fade-up_0.2s_ease-out]">
-
-            {/* Input */}
             <form onSubmit={handleVerTodos} className="flex items-center gap-3 px-5 py-4 border-b border-border">
               <Search size={18} className="text-muted-foreground shrink-0" />
               <input
@@ -260,42 +332,25 @@ const Navbar = () => {
                 <X size={18} />
               </button>
             </form>
-
-            {/* Resultados */}
             <div className="max-h-[60vh] overflow-y-auto">
-              {cargando && (
-                <p className="font-body text-sm text-muted-foreground text-center py-8">Cargando productos...</p>
-              )}
-              {!cargando && !query.trim() && (
-                <p className="font-body text-sm text-muted-foreground text-center py-10">Escribe para buscar sombreros... 🤠</p>
-              )}
+              {cargando && <p className="font-body text-sm text-muted-foreground text-center py-8">Cargando productos...</p>}
+              {!cargando && !query.trim() && <p className="font-body text-sm text-muted-foreground text-center py-10">Escribe para buscar sombreros... 🤠</p>}
               {!cargando && query.trim() && resultados.length === 0 && (
-                <p className="font-body text-sm text-muted-foreground text-center py-10">
-                  Sin resultados para <strong>"{query}"</strong>
-                </p>
+                <p className="font-body text-sm text-muted-foreground text-center py-10">Sin resultados para <strong>"{query}"</strong></p>
               )}
               {!cargando && resultados.length > 0 && (
                 <ul>
                   {resultados.map((p) => (
                     <li key={p.id}>
-                      <button
-                        onClick={() => handleProductoClick(p.slug)}
-                        className="w-full flex items-center gap-4 px-5 py-3 hover:bg-card transition-colors text-left"
-                      >
+                      <button onClick={() => handleProductoClick(p.slug)} className="w-full flex items-center gap-4 px-5 py-3 hover:bg-card transition-colors text-left">
                         <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-muted">
-                          <img
-                            src={p.imagen_principal || `https://placehold.co/48x48/4A3728/F5EFE0?text=🤠`}
-                            alt={p.nombre}
-                            className="w-full h-full object-cover"
-                          />
+                          <img src={p.imagen_principal || `https://placehold.co/48x48/4A3728/F5EFE0?text=🤠`} alt={p.nombre} className="w-full h-full object-cover" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-body font-semibold text-sm text-foreground truncate">{p.nombre}</p>
                           <p className="font-body text-xs text-muted-foreground">{p.marca} · {p.categoria}</p>
                         </div>
-                        <p className="font-body text-sm font-semibold text-primary shrink-0">
-                          ${p.precio.toLocaleString("es-MX")} MXN
-                        </p>
+                        <p className="font-body text-sm font-semibold text-primary shrink-0">${p.precio.toLocaleString("es-MX")} MXN</p>
                       </button>
                     </li>
                   ))}
@@ -311,11 +366,15 @@ const Navbar = () => {
         </div>
       )}
 
-      {/* Animación del drawer */}
+      {/* Animaciones */}
       <style>{`
         @keyframes slideInRight {
           from { transform: translateX(100%); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeInDown {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </>

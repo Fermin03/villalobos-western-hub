@@ -1,6 +1,6 @@
 // ============================================================
 // src/pages/admin/Productos.tsx — Gestión de productos y categorías
-// Permite agregar, editar productos y gestionar categorías dinámicas
+// Permite agregar, editar productos con tallas y gestionar categorías
 // ============================================================
 
 import { useState, useEffect } from 'react';
@@ -19,6 +19,7 @@ interface FormProducto {
   imagen_principal: string;
   imagenes_texto: string;
   descripcion: string;
+  tallas_texto: string; // Tallas separadas por coma
   destacado: boolean;
   activo: boolean;
 }
@@ -27,17 +28,18 @@ const FORM_VACIO: FormProducto = {
   nombre: '', slug: '', marca: '', categoria: '',
   precio: '', precio_mayoreo: '', stock: '',
   imagen_principal: '', imagenes_texto: '', descripcion: '',
-  destacado: false, activo: true,
+  tallas_texto: '', destacado: false, activo: true,
 };
 
-// Vista activa del panel
 type Vista = 'productos' | 'categorias';
+
+// Tallas predefinidas comunes para sombreros
+const TALLAS_COMUNES = ['54', '55', '56', '57', '58', '59', '60', '61', '62'];
 
 export default function AdminProductos() {
   const navigate = useNavigate();
   const [vista, setVista] = useState<Vista>('productos');
 
-  // --- Estado de productos ---
   const [productos, setProductos] = useState<any[]>([]);
   const [cargandoProductos, setCargandoProductos] = useState(true);
   const [mostrarForm, setMostrarForm] = useState(false);
@@ -46,14 +48,12 @@ export default function AdminProductos() {
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState('');
 
-  // --- Estado de categorías ---
   const [categorias, setCategorias] = useState<any[]>([]);
   const [cargandoCategorias, setCargandoCategorias] = useState(true);
   const [nuevaCategoria, setNuevaCategoria] = useState('');
   const [guardandoCategoria, setGuardandoCategoria] = useState(false);
   const [mensajeCategoria, setMensajeCategoria] = useState('');
 
-  // --- Verificar autenticación ---
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
     if (!token) { navigate('/admin'); return; }
@@ -61,7 +61,6 @@ export default function AdminProductos() {
     cargarCategorias();
   }, []);
 
-  // --- Carga productos ---
   async function cargarProductos(token?: string) {
     const t = token || localStorage.getItem('admin_token') || '';
     try {
@@ -77,7 +76,6 @@ export default function AdminProductos() {
     }
   }
 
-  // --- Carga categorías ---
   async function cargarCategorias() {
     try {
       const res = await fetch(`${API_URL}/admin/categorias`);
@@ -90,7 +88,6 @@ export default function AdminProductos() {
     }
   }
 
-  // --- Genera slug automático ---
   function generarSlug(nombre: string) {
     return nombre.toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -98,7 +95,6 @@ export default function AdminProductos() {
       .replace(/\s+/g, '-');
   }
 
-  // --- Maneja cambios en el formulario de producto ---
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
@@ -109,7 +105,26 @@ export default function AdminProductos() {
     }));
   }
 
-  // --- Guarda producto ---
+  // --- Toggle de talla predefinida ---
+  function toggleTalla(talla: string) {
+    const tallasActuales = form.tallas_texto
+      ? form.tallas_texto.split(',').map(t => t.trim()).filter(t => t !== '')
+      : [];
+
+    const yaExiste = tallasActuales.includes(talla);
+    const nuevasTallas = yaExiste
+      ? tallasActuales.filter(t => t !== talla)
+      : [...tallasActuales, talla].sort((a, b) => parseInt(a) - parseInt(b));
+
+    setForm(prev => ({ ...prev, tallas_texto: nuevasTallas.join(', ') }));
+  }
+
+  function tallasSeleccionadas(): string[] {
+    return form.tallas_texto
+      ? form.tallas_texto.split(',').map(t => t.trim()).filter(t => t !== '')
+      : [];
+  }
+
   async function handleGuardar(e: React.FormEvent) {
     e.preventDefault();
     setGuardando(true);
@@ -121,15 +136,21 @@ export default function AdminProductos() {
       ? form.imagenes_texto.split('\n').map(u => u.trim()).filter(u => u !== '')
       : [];
 
+    const tallasArray = form.tallas_texto
+      ? form.tallas_texto.split(',').map(t => t.trim()).filter(t => t !== '')
+      : [];
+
     const payload = {
       ...form,
       precio: parseFloat(form.precio),
       precio_mayoreo: form.precio_mayoreo ? parseFloat(form.precio_mayoreo) : null,
       stock: parseInt(form.stock),
       imagenes: imagenesArray,
+      tallas: tallasArray,
     };
 
     delete (payload as any).imagenes_texto;
+    delete (payload as any).tallas_texto;
 
     try {
       const url = editandoId
@@ -160,15 +181,18 @@ export default function AdminProductos() {
     }
   }
 
-  // --- Carga datos de un producto para editar ---
   function handleEditar(producto: any) {
     let imagenesTexto = '';
     try {
-      const imgs = typeof producto.imagenes === 'string'
-        ? JSON.parse(producto.imagenes)
-        : producto.imagenes;
+      const imgs = typeof producto.imagenes === 'string' ? JSON.parse(producto.imagenes) : producto.imagenes;
       imagenesTexto = Array.isArray(imgs) ? imgs.join('\n') : '';
     } catch { imagenesTexto = ''; }
+
+    let tallasTexto = '';
+    try {
+      const talls = typeof producto.tallas === 'string' ? JSON.parse(producto.tallas) : producto.tallas;
+      tallasTexto = Array.isArray(talls) ? talls.join(', ') : '';
+    } catch { tallasTexto = ''; }
 
     setForm({
       nombre: producto.nombre,
@@ -180,6 +204,7 @@ export default function AdminProductos() {
       stock: producto.stock.toString(),
       imagen_principal: producto.imagen_principal,
       imagenes_texto: imagenesTexto,
+      tallas_texto: tallasTexto,
       descripcion: producto.descripcion || '',
       destacado: producto.destacado === 1,
       activo: producto.activo === 1,
@@ -190,25 +215,19 @@ export default function AdminProductos() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // --- Agregar categoría ---
   async function handleAgregarCategoria(e: React.FormEvent) {
     e.preventDefault();
     if (!nuevaCategoria.trim()) return;
-
     setGuardandoCategoria(true);
     setMensajeCategoria('');
-
     const token = localStorage.getItem('admin_token') || '';
-
     try {
       const res = await fetch(`${API_URL}/admin/categorias`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ nombre: nuevaCategoria.trim() }),
       });
-
       const datos = await res.json();
-
       if (datos.ok) {
         setMensajeCategoria('✅ Categoría agregada');
         setNuevaCategoria('');
@@ -223,20 +242,15 @@ export default function AdminProductos() {
     }
   }
 
-  // --- Eliminar categoría ---
   async function handleEliminarCategoria(id: number, nombre: string) {
     if (!confirm(`¿Eliminar la categoría "${nombre}"?`)) return;
-
     const token = localStorage.getItem('admin_token') || '';
-
     try {
       const res = await fetch(`${API_URL}/admin/categorias/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-
       const datos = await res.json();
-
       if (datos.ok) {
         setMensajeCategoria('✅ Categoría eliminada');
         cargarCategorias();
@@ -248,7 +262,6 @@ export default function AdminProductos() {
     }
   }
 
-  // --- Estilos reutilizables ---
   const estiloInput = {
     width: '100%', padding: '10px 14px',
     border: '1px solid #D5C9B5', borderRadius: '8px',
@@ -278,13 +291,8 @@ export default function AdminProductos() {
           Villalobos Admin — Productos
         </h1>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          {/* Tabs de navegación */}
-          <button onClick={() => setVista('productos')} style={estiloTab(vista === 'productos')}>
-            🎩 Productos
-          </button>
-          <button onClick={() => setVista('categorias')} style={estiloTab(vista === 'categorias')}>
-            🗂 Categorías
-          </button>
+          <button onClick={() => setVista('productos')} style={estiloTab(vista === 'productos')}>🎩 Productos</button>
+          <button onClick={() => setVista('categorias')} style={estiloTab(vista === 'categorias')}>🗂 Categorías</button>
           <button onClick={() => navigate('/admin/dashboard')} style={{ background: 'transparent', border: '1px solid #C9A84C', color: '#C9A84C', padding: '6px 16px', borderRadius: '6px', cursor: 'pointer' }}>
             ← Dashboard
           </button>
@@ -312,7 +320,7 @@ export default function AdminProductos() {
               </div>
             )}
 
-            {/* Formulario de producto */}
+            {/* Formulario */}
             {mostrarForm && (
               <div style={{ background: '#fff', borderRadius: '12px', padding: '32px', marginBottom: '32px', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' }}>
                 <h2 style={{ color: '#4A3728', fontFamily: 'Playfair Display, serif', marginTop: 0 }}>
@@ -342,7 +350,6 @@ export default function AdminProductos() {
                       </select>
                     </div>
 
-                    {/* Tipo de sombrero — cargado dinámicamente desde BD */}
                     <div>
                       <label style={estiloLabel}>Tipo de Sombrero *</label>
                       <select name="categoria" value={form.categoria} onChange={handleChange} required style={estiloInput}>
@@ -356,7 +363,7 @@ export default function AdminProductos() {
                         )}
                       </select>
                       <p style={{ fontSize: '12px', color: '#999', margin: '4px 0 0' }}>
-                        ¿No está el tipo? Agrégalo en la pestaña <strong>Categorías</strong>
+                        ¿No está el tipo? Agrégalo en <strong>Categorías</strong>
                       </p>
                     </div>
 
@@ -382,12 +389,64 @@ export default function AdminProductos() {
 
                   </div>
 
+                  {/* ══ SELECTOR DE TALLAS ══ */}
+                  <div style={{ marginTop: '24px', padding: '20px', background: '#F5EFE0', borderRadius: '10px' }}>
+                    <label style={{ ...estiloLabel, marginBottom: '12px' }}>
+                      Tallas disponibles
+                    </label>
+
+                    {/* Botones de tallas predefinidas */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                      {TALLAS_COMUNES.map(talla => {
+                        const seleccionada = tallasSeleccionadas().includes(talla);
+                        return (
+                          <button
+                            key={talla}
+                            type="button"
+                            onClick={() => toggleTalla(talla)}
+                            style={{
+                              width: '48px', height: '48px',
+                              borderRadius: '8px',
+                              border: `2px solid ${seleccionada ? '#4A3728' : '#D5C9B5'}`,
+                              background: seleccionada ? '#4A3728' : '#fff',
+                              color: seleccionada ? '#F5EFE0' : '#4A3728',
+                              fontFamily: 'Jost, sans-serif',
+                              fontSize: '14px',
+                              fontWeight: seleccionada ? 700 : 400,
+                              cursor: 'pointer',
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            {talla}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Campo de texto para tallas personalizadas */}
+                    <label style={{ ...estiloLabel, fontSize: '12px', color: '#999' }}>
+                      O escribe tallas personalizadas separadas por coma:
+                    </label>
+                    <input
+                      name="tallas_texto"
+                      value={form.tallas_texto}
+                      onChange={handleChange}
+                      placeholder="Ej: 56, 57, 58, 59"
+                      style={{ ...estiloInput, background: '#fff' }}
+                    />
+
+                    {/* Preview de tallas seleccionadas */}
+                    {tallasSeleccionadas().length > 0 && (
+                      <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#4A3728' }}>
+                        ✅ Tallas seleccionadas: <strong>{tallasSeleccionadas().join(', ')}</strong>
+                      </p>
+                    )}
+                  </div>
+
                   {/* Imágenes secundarias */}
                   <div style={{ marginTop: '20px' }}>
                     <label style={estiloLabel}>Imágenes secundarias (slider)</label>
-                    <p style={{ fontSize: '13px', color: '#999', margin: '0 0 8px' }}>
-                      Una URL por línea
-                    </p>
+                    <p style={{ fontSize: '13px', color: '#999', margin: '0 0 8px' }}>Una URL por línea</p>
                     <textarea
                       name="imagenes_texto"
                       rows={4}
@@ -406,7 +465,7 @@ export default function AdminProductos() {
                   <div style={{ display: 'flex', gap: '24px', marginTop: '20px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#4A3728' }}>
                       <input type="checkbox" name="destacado" checked={form.destacado} onChange={handleChange} />
-                      Producto destacado (aparece en homepage)
+                      Producto destacado
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#4A3728' }}>
                       <input type="checkbox" name="activo" checked={form.activo} onChange={handleChange} />
@@ -414,19 +473,22 @@ export default function AdminProductos() {
                     </label>
                   </div>
 
-                  <button type="submit" disabled={guardando} style={{ marginTop: '24px', background: '#4A3728', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: '8px', fontSize: '15px', fontWeight: 600, cursor: guardando ? 'not-allowed' : 'pointer' }}>
+                  <button
+                    type="submit"
+                    disabled={guardando}
+                    style={{ marginTop: '24px', background: '#4A3728', color: '#fff', border: 'none', padding: '12px 32px', borderRadius: '8px', fontSize: '15px', fontWeight: 600, cursor: guardando ? 'not-allowed' : 'pointer' }}
+                  >
                     {guardando ? 'Guardando...' : editandoId ? 'Actualizar Producto' : 'Crear Producto'}
                   </button>
                 </form>
               </div>
             )}
 
-            {/* Tabla de productos */}
+            {/* Tabla */}
             <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' }}>
               <h3 style={{ color: '#4A3728', fontFamily: 'Playfair Display, serif', marginTop: 0 }}>
                 {productos.length} productos en catálogo
               </h3>
-
               {cargandoProductos ? (
                 <p style={{ color: '#999' }}>Cargando productos...</p>
               ) : productos.length === 0 ? (
@@ -435,32 +497,42 @@ export default function AdminProductos() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid #F5EFE0' }}>
-                      {['#', 'Nombre', 'Marca', 'Tipo', 'Precio', 'Stock', 'Estado', 'Acciones'].map(h => (
+                      {['#', 'Nombre', 'Marca', 'Tipo', 'Tallas', 'Precio', 'Stock', 'Estado', 'Acciones'].map(h => (
                         <th key={h} style={{ textAlign: 'left', padding: '10px', color: '#999', fontWeight: 500, fontSize: '13px' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {productos.map((p: any) => (
-                      <tr key={p.id} style={{ borderBottom: '1px solid #F5EFE0' }}>
-                        <td style={{ padding: '12px 10px', fontSize: '14px', color: '#999' }}>{p.id}</td>
-                        <td style={{ padding: '12px 10px', fontSize: '14px', color: '#4A3728', fontWeight: 500 }}>{p.nombre}</td>
-                        <td style={{ padding: '12px 10px', fontSize: '14px', color: '#4A3728' }}>{p.marca}</td>
-                        <td style={{ padding: '12px 10px', fontSize: '14px', color: '#4A3728' }}>{p.categoria}</td>
-                        <td style={{ padding: '12px 10px', fontSize: '14px', color: '#4A3728' }}>${p.precio}</td>
-                        <td style={{ padding: '12px 10px', fontSize: '14px', color: p.stock < 5 ? '#e74c3c' : '#4A3728' }}>{p.stock}</td>
-                        <td style={{ padding: '12px 10px' }}>
-                          <span style={{ background: p.activo ? '#6B7A3E' : '#999', color: '#fff', padding: '3px 10px', borderRadius: '20px', fontSize: '12px' }}>
-                            {p.activo ? 'Activo' : 'Inactivo'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 10px' }}>
-                          <button onClick={() => handleEditar(p)} style={{ background: '#4A3728', color: '#fff', border: 'none', padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
-                            Editar
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {productos.map((p: any) => {
+                      let tallasArr: string[] = [];
+                      try {
+                        tallasArr = typeof p.tallas === 'string' ? JSON.parse(p.tallas) : (p.tallas || []);
+                      } catch {}
+
+                      return (
+                        <tr key={p.id} style={{ borderBottom: '1px solid #F5EFE0' }}>
+                          <td style={{ padding: '12px 10px', fontSize: '14px', color: '#999' }}>{p.id}</td>
+                          <td style={{ padding: '12px 10px', fontSize: '14px', color: '#4A3728', fontWeight: 500 }}>{p.nombre}</td>
+                          <td style={{ padding: '12px 10px', fontSize: '14px', color: '#4A3728' }}>{p.marca}</td>
+                          <td style={{ padding: '12px 10px', fontSize: '14px', color: '#4A3728' }}>{p.categoria}</td>
+                          <td style={{ padding: '12px 10px', fontSize: '13px', color: '#666' }}>
+                            {tallasArr.length > 0 ? tallasArr.join(', ') : '—'}
+                          </td>
+                          <td style={{ padding: '12px 10px', fontSize: '14px', color: '#4A3728' }}>${p.precio}</td>
+                          <td style={{ padding: '12px 10px', fontSize: '14px', color: p.stock < 5 ? '#e74c3c' : '#4A3728' }}>{p.stock}</td>
+                          <td style={{ padding: '12px 10px' }}>
+                            <span style={{ background: p.activo ? '#6B7A3E' : '#999', color: '#fff', padding: '3px 10px', borderRadius: '20px', fontSize: '12px' }}>
+                              {p.activo ? 'Activo' : 'Inactivo'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 10px' }}>
+                            <button onClick={() => handleEditar(p)} style={{ background: '#4A3728', color: '#fff', border: 'none', padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                              Editar
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
@@ -481,11 +553,8 @@ export default function AdminProductos() {
               </div>
             )}
 
-            {/* Formulario nueva categoría */}
             <div style={{ background: '#fff', borderRadius: '12px', padding: '28px', marginBottom: '28px', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' }}>
-              <h3 style={{ color: '#4A3728', fontFamily: 'Playfair Display, serif', marginTop: 0 }}>
-                Agregar nuevo tipo
-              </h3>
+              <h3 style={{ color: '#4A3728', fontFamily: 'Playfair Display, serif', marginTop: 0 }}>Agregar nuevo tipo</h3>
               <form onSubmit={handleAgregarCategoria} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
                 <div style={{ flex: 1 }}>
                   <label style={estiloLabel}>Nombre del tipo de sombrero</label>
@@ -507,7 +576,6 @@ export default function AdminProductos() {
               </form>
             </div>
 
-            {/* Lista de categorías */}
             <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' }}>
               <h3 style={{ color: '#4A3728', fontFamily: 'Playfair Display, serif', marginTop: 0 }}>
                 Tipos actuales ({categorias.length})
@@ -515,7 +583,6 @@ export default function AdminProductos() {
               <p style={{ fontSize: '13px', color: '#999', marginBottom: '16px' }}>
                 Estos tipos aparecen como filtros en la tienda y en el formulario de productos.
               </p>
-
               {cargandoCategorias ? (
                 <p style={{ color: '#999' }}>Cargando...</p>
               ) : categorias.length === 0 ? (
@@ -531,10 +598,7 @@ export default function AdminProductos() {
                       <button
                         onClick={() => handleEliminarCategoria(cat.id, cat.nombre)}
                         style={{ background: 'transparent', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 4px' }}
-                        title="Eliminar categoría"
-                      >
-                        ×
-                      </button>
+                      >×</button>
                     </div>
                   ))}
                 </div>

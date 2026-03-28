@@ -8,8 +8,6 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const xss = require('xss-clean');
-const mongoSanitize = require('express-mongo-sanitize');
 require('dotenv').config();
 
 // --- Importar rutas ---
@@ -28,7 +26,9 @@ const PUERTO = process.env.PORT || 3001;
 // Protege contra clickjacking, XSS, MIME sniffing, etc.
 // ============================================================
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' }, // Permite imágenes desde otros dominios
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginOpenerPolicy: false,
+  contentSecurityPolicy: false,
 }));
 
 // ============================================================
@@ -101,11 +101,6 @@ app.use('/api/pagos/webhook', express.raw({ type: 'application/json' }));
 // Body parser JSON con límite de tamaño
 app.use(express.json({ limit: '10kb' }));
 
-// Limpieza de datos contra XSS — elimina scripts maliciosos
-app.use(xss());
-
-// Sanitización contra inyección NoSQL
-app.use(mongoSanitize());
 
 // Rate limiting general para todas las rutas
 app.use('/api', limitadorGeneral);
