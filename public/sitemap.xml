@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ============================================================ -->
+<!-- sitemap.xml — Villalobos Western Hats                        -->
+<!-- Mapa del sitio para Google y otros buscadores                -->
+<!-- Actualizar cuando se agreguen productos nuevos               -->
+<!-- ============================================================ -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <!-- PÁGINA PRINCIPAL -->
+  <url>
+    <loc>https://villaloboswesternhats.com/</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://villaloboswesternhats.com/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://villaloboswesternhats.com/?lang=en"/>
+  </url>
+
+  <!-- CATÁLOGO -->
+  <url>
+    <loc>https://villaloboswesternhats.com/catalogo</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- MARCAS -->
+  <url>
+    <loc>https://villaloboswesternhats.com/marcas</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- MAYOREO -->
+  <url>
+    <loc>https://villaloboswesternhats.com/mayoreo</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- QUIÉNES SOMOS -->
+  <url>
+    <loc>https://villaloboswesternhats.com/nosotros</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- ENVÍOS -->
+  <url>
+    <loc>https://villaloboswesternhats.com/envios</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- DEVOLUCIONES -->
+  <url>
+    <loc>https://villaloboswesternhats.com/devoluciones</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- CONTACTO -->
+  <url>
+    <loc>https://villaloboswesternhats.com/contacto</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- FAQ -->
+  <url>
+    <loc>https://villaloboswesternhats.com/faq</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- AVISO DE PRIVACIDAD -->
+  <url>
+    <loc>https://villaloboswesternhats.com/privacidad</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <!-- TÉRMINOS Y CONDICIONES -->
+  <url>
+    <loc>https://villaloboswesternhats.com/terminos</loc>
+    <lastmod>2026-03-28</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+</urlset>
