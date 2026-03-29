@@ -118,7 +118,7 @@ const Navbar = () => {
 
           {/* Logo */}
           <Link to="/" className="flex items-center shrink-0" onClick={() => setMobileOpen(false)}>
-            <VillalobosLogo className="h-10 md:h-12 w-auto text-primary" />
+            <VillalobosLogo className="h-16 md:h-19 w-auto text-primary" />
           </Link>
 
           {/* Desktop Links */}
@@ -144,11 +144,11 @@ const Navbar = () => {
               <Search size={20} />
             </button>
 
-            {/* Carrito con mini preview */}
+            {/* Carrito con mini preview — solo en desktop */}
             <div
               className="relative"
-              onMouseEnter={handleCarritoEnter}
-              onMouseLeave={handleCarritoLeave}
+              onMouseEnter={() => window.innerWidth >= 1024 ? handleCarritoEnter() : null}
+              onMouseLeave={() => window.innerWidth >= 1024 ? handleCarritoLeave() : null}
             >
               <Link to="/carrito" className="relative text-foreground hover:text-accent transition-colors block">
                 <ShoppingBag size={20} />

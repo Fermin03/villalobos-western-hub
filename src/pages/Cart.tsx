@@ -1,12 +1,139 @@
 /**
  * CARRITO — Lista de items, resumen y checkout.
+ * Incluye botones de pago rápido Apple Pay / Google Pay vía Stripe
  */
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCart } from "@/contexts/CartContext";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentRequestButtonElement, useStripe } from "@stripe/react-stripe-js";
+import { useNavigate } from "react-router-dom";
 
-const Cart = () => {
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+
+// ============================================================
+// Botones de pago rápido Apple Pay / Google Pay
+// ============================================================
+const BotonesPagoRapido = () => {
+  const stripe = useStripe();
+  const { items, subtotal, clearCart } = useCart();
+  const navigate = useNavigate();
+  const [paymentRequest, setPaymentRequest] = useState<any>(null);
+
+  useEffect(() => {
+    if (!stripe || subtotal === 0) return;
+
+    const pr = stripe.paymentRequest({
+      country: "MX",
+      currency: "mxn",
+      total: {
+        label: "Villalobos Western Hats",
+        amount: Math.round(subtotal * 100),
+      },
+      requestPayerName: true,
+      requestPayerEmail: true,
+      requestPayerPhone: true,
+    });
+
+    pr.canMakePayment().then((result) => {
+      if (result) setPaymentRequest(pr);
+    });
+
+    pr.on("paymentmethod", async (ev) => {
+      try {
+        const resIntento = await fetch(`${API_URL}/pagos/crear-intento`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: items.map((i) => ({ id: i.id, cantidad: i.quantity })),
+            correo: ev.payerEmail || "",
+            tipo_cliente: "menudeo",
+          }),
+        });
+
+        const datosIntento = await resIntento.json();
+
+        if (!datosIntento.ok) {
+          ev.complete("fail");
+          return;
+        }
+
+        const { error, paymentIntent } = await stripe.confirmCardPayment(
+          datosIntento.clientSecret,
+          { payment_method: ev.paymentMethod.id },
+          { handleActions: false }
+        );
+
+        if (error) {
+          ev.complete("fail");
+          return;
+        }
+
+        ev.complete("success");
+
+        // Crear pedido
+        await fetch(`${API_URL}/pedidos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            stripe_payment_id: paymentIntent?.id,
+            cliente_nombre: ev.payerName || "",
+            cliente_correo: ev.payerEmail || "",
+            cliente_telefono: ev.payerPhone || "",
+            direccion_envio: {},
+            items: items.map((i) => ({ id: i.id, cantidad: i.quantity, precio: i.price })),
+            total: subtotal,
+            tipo_cliente: "menudeo",
+          }),
+        });
+
+        clearCart();
+        navigate("/confirmacion");
+
+      } catch (err) {
+        ev.complete("fail");
+      }
+    });
+
+  }, [stripe, subtotal]);
+
+  if (!paymentRequest) return null;
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center gap-3 my-3">
+        <div className="flex-1 h-px bg-border" />
+        <span className="font-body text-xs text-muted-foreground">pago rápido</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+      <PaymentRequestButtonElement
+        options={{
+          paymentRequest,
+          style: {
+            paymentRequestButton: {
+              type: "buy",
+              theme: "dark",
+              height: "48px",
+            },
+          },
+        }}
+      />
+      <div className="flex items-center gap-3 mt-3">
+        <div className="flex-1 h-px bg-border" />
+        <span className="font-body text-xs text-muted-foreground">o paga con tarjeta</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// Página principal del carrito
+// ============================================================
+const CartContent = () => {
   const { t } = useLanguage();
   const { items, updateQuantity, removeItem, subtotal } = useCart();
 
@@ -71,12 +198,19 @@ const Cart = () => {
               <span className="text-xl font-bold text-primary">${subtotal.toLocaleString()} MXN</span>
             </div>
           </div>
+
+          {/* Botones Apple Pay / Google Pay */}
+          <BotonesPagoRapido />
+
+          {/* Botón checkout normal */}
           <Link
             to="/checkout"
             className="block w-full py-3.5 bg-primary text-primary-foreground font-body font-medium text-sm rounded text-center hover:opacity-90 transition-opacity"
           >
             {t("cart.checkout")}
           </Link>
+
+          {/* Iconos de pago */}
           <div className="flex gap-3 justify-center mt-4 items-center flex-wrap">
             <img src="/images/payments/VISA-SVG.webp" alt="Visa" className="h-6 opacity-60" />
             <img src="/images/payments/MASTERCARD-SVG.webp" alt="Mastercard" className="h-6 opacity-60" />
@@ -84,10 +218,23 @@ const Cart = () => {
             <img src="/images/payments/APPLE PAY-SVG.webp" alt="Apple Pay" className="h-6 opacity-60" />
             <img src="/images/payments/GOOGLE PAY-SVG.webp" alt="Google Pay" className="h-6 opacity-60" />
           </div>
+
+          <p className="font-body text-xs text-muted-foreground text-center mt-3">
+            🔒 Transacción cifrada y segura
+          </p>
         </div>
       </div>
     </div>
   );
 };
+
+// ============================================================
+// Wrapper con Elements de Stripe
+// ============================================================
+const Cart = () => (
+  <Elements stripe={stripePromise}>
+    <CartContent />
+  </Elements>
+);
 
 export default Cart;
