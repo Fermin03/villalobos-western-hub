@@ -178,8 +178,8 @@ const Index = () => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-card rounded-2xl p-8 border border-accent/20">
             <div>
               <span className="font-body text-xs tracking-[0.3em] uppercase text-accent mb-2 block">Envío gratis</span>
-              <h3 className="font-display text-2xl font-bold mb-2">En compras mayores a $1,500 MXN</h3>
-              <p className="font-body text-muted-foreground">Solo válido para envíos dentro de México. Recibe tu sombrero en la puerta de tu casa.</p>
+              <h3 className="font-display text-2xl font-bold mb-2">En compras mayores a $2,000 MXN</h3>
+              <p className="font-body text-muted-foreground">Solo válido para compras de menudeo dentro de México. No aplica para mayoreo.</p>
             </div>
             <Link to="/catalogo" className="shrink-0 inline-flex items-center justify-center px-8 py-3 bg-primary text-primary-foreground font-body font-medium text-sm rounded hover:opacity-90 transition-opacity">
               Ver catálogo completo
